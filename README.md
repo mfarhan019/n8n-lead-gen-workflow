@@ -39,7 +39,6 @@ Google Sheets    Google Sheets
 | Repeated characters | Blocks `aaaa@aaaa.com` style inputs |
 | Phone length | Must be 10–15 digits |
 | Repeated digits | Blocks `1111111111` style numbers |
-| Sequential digits | Blocks `1234567890` / `0987654321` |
 
 ---
 
