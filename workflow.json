@@ -1,0 +1,234 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-generation",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1344, 96],
+      "id": "abb3b15d-b3b3-49f6-b35b-8e6923e14556",
+      "name": "Webhook",
+      "webhookId": "2aeb45a8-8a24-40cb-8236-a15386e0c3bf"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "80b41350-7c7f-4dae-babe-cfce0bcae552",
+              "name": "name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "60b0f1fa-b9fc-40e4-8a58-bd5a7e94f36c",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a9fdb1f9-a71a-4322-b7b2-fc639e15ace3",
+              "name": "phone",
+              "value": "={{ $json.body.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "8e5d2572-bb04-4e92-ab3f-13248f6c2ef7",
+              "name": "treatmentType",
+              "value": "={{ $json.body.treatmentType }}",
+              "type": "string"
+            },
+            {
+              "id": "667de22c-3869-4616-a2a9-c08c334ea777",
+              "name": "date",
+              "value": "={{ $now.format('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [-1120, 96],
+      "id": "8fbcd630-b7c1-4f0c-bc0d-7c6d399f6bb1",
+      "name": "Get Required Fields Only"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node - Lead Validation (no external libraries)\n\nconst items = $input.all();\n\n// Helper: Title Case name (e.g. \"farhan ali\" -> \"Farhan Ali\")\nfunction toTitleCase(str) {\n  return str\n    .toLowerCase()\n    .split(\" \")\n    .filter(word => word.length > 0)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1))\n    .join(\" \");\n}\n\n// Helper: Email validation\nfunction isValidEmail(email) {\n  if (!email) return false;\n\n  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/;\n  if (!emailRegex.test(email)) return false;\n\n  const [localPart, domain] = email.split(\"@\");\n\n  // Obvious fake/test patterns\n  const fakePatterns = [\"test\", \"fake\", \"example\", \"abc@abc\", \"asdf\", \"xyz\"];\n  const lowerEmail = email.toLowerCase();\n  if (fakePatterns.some(pattern => lowerEmail.includes(pattern))) return false;\n\n  // Same character repeated too much (e.g. aaaa@aaaa.com)\n  if (/^(.)\\1+$/.test(localPart)) return false;\n\n  return true;\n}\n\n// Helper: Phone validation\nfunction isValidPhone(phone) {\n  if (!phone) return false;\n\n  const cleaned = phone.replace(/[\\s-()]/g, \"\");\n  const phoneRegex = /^\\+?[0-9]{10,15}$/;\n  if (!phoneRegex.test(cleaned)) return false;\n\n  const digitsOnly = cleaned.replace(\"+\", \"\");\n\n  // All same digits (e.g. 1111111111)\n  if (/^(\\d)\\1+$/.test(digitsOnly)) return false;\n\n  // Sequential digits (e.g. 1234567890 or 0987654321)\n  const ascending = \"0123456789\";\n  const descending = \"9876543210\";\n  if (ascending.includes(digitsOnly) || descending.includes(digitsOnly)) return false;\n\n  return true;\n}\n\n// Process each lead\nfor (const item of items) {\n  const email = (item.json.email || \"\").trim();\n  const phone = (item.json.phone || \"\").trim();\n  const name = (item.json.name || \"\").trim();\n\n  const emailValid = isValidEmail(email);\n  const phoneValid = isValidPhone(phone);\n\n  item.json.name = toTitleCase(name);\n  item.json.status = (emailValid && phoneValid) ? \"Genuine Lead\" : \"Fake Lead\";\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-896, 96],
+      "id": "8493ab30-0307-4ec1-a0bb-f60b4806941c",
+      "name": "Checks if the incoming lead is genuine or fake"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Lead Gen",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Phone No.": "={{ $json.phone }}",
+            "Teatment": "={{ $json.treatmentType }}",
+            "Date": "={{ $json.date }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Name", "displayName": "Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Email", "displayName": "Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Phone No.", "displayName": "Phone No.", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Teatment", "displayName": "Teatment", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Date", "displayName": "Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Status", "displayName": "Status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-672, 96],
+      "id": "2dbed5e4-a644-45ed-9559-192cba69b868",
+      "name": "Append new lead in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_ADMIN_EMAIL@gmail.com",
+        "subject": "=🔔 New Lead Received - {{ $('Checks if the incoming lead is genuine or fake').item.json.name }} ({{ $('Checks if the incoming lead is genuine or fake').item.json.status }})",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n</head>\n<body style=\"margin:0; padding:0; background-color:#f4f6f8; font-family: 'Segoe UI', Arial, sans-serif;\">\n\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding: 30px 0;\">\n    <tr>\n      <td align=\"center\">\n        <table width=\"500\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08);\">\n\n          <!-- Header -->\n          <tr>\n            <td style=\"background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 28px 30px;\">\n              <h1 style=\"color:#ffffff; margin:0; font-size:22px;\">📩 New Lead Alert</h1>\n              <p style=\"color:#e0e7ff; margin:6px 0 0; font-size:14px;\">A new lead just came through your form</p>\n            </td>\n          </tr>\n\n          <!-- Status Badge -->\n          <tr>\n            <td style=\"padding: 20px 30px 0;\">\n              <span style=\"display:inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color:#ffffff; background-color: {{$json.status === 'Genuine Lead' ? '#22c55e' : '#ef4444'}};\">\n                {{ $('Checks if the incoming lead is genuine or fake').item.json.status }}\n              </span>\n            </td>\n          </tr>\n\n          <!-- Lead Details -->\n          <tr>\n            <td style=\"padding: 24px 30px;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">\n                    <span style=\"color:#6b7280; font-size:13px;\">Name</span><br>\n                    <span style=\"color:#111827; font-size:16px; font-weight:600;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.name }}</span>\n                  </td>\n                </tr>\n                <tr>\n                  <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">\n                    <span style=\"color:#6b7280; font-size:13px;\">Email</span><br>\n                    <span style=\"color:#111827; font-size:16px;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.email }}</span>\n                  </td>\n                </tr>\n                <tr>\n                  <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">\n                    <span style=\"color:#6b7280; font-size:13px;\">Phone</span><br>\n                    <span style=\"color:#111827; font-size:16px;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.phone }}</span>\n                  </td>\n                </tr>\n                <tr>\n                  <td style=\"padding: 10px 0; border-bottom: 1px solid #eee;\">\n                    <span style=\"color:#6b7280; font-size:13px;\">Treatment Type</span><br>\n                    <span style=\"color:#111827; font-size:16px;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.treatmentType }}</span>\n                  </td>\n                </tr>\n                <tr>\n                  <td style=\"padding: 10px 0;\">\n                    <span style=\"color:#6b7280; font-size:13px;\">Date Received</span><br>\n                    <span style=\"color:#111827; font-size:16px;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.date }}</span>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n\n          <!-- Footer -->\n          <tr>\n            <td style=\"background:#f9fafb; padding: 18px 30px; text-align:center;\">\n              <p style=\"margin:0; color:#9ca3af; font-size:12px;\">This is an automated notification from your lead generation system.</p>\n            </td>\n          </tr>\n\n        </table>\n      </td>\n    </tr>\n  </table>\n\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Your Clinic Name"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [-448, 96],
+      "id": "2b86062b-bcc7-4b65-8b3f-ec4455a3fc6e",
+      "name": "Send a message to ME",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "63cc6339-4ae6-4c5b-83ff-f7f31f3e2157",
+              "leftValue": "={{ $('Checks if the incoming lead is genuine or fake').item.json.status }}",
+              "rightValue": "=Genuine Lead",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-224, 96],
+      "id": "8434d889-c242-4b09-9bfd-f41062721d9d",
+      "name": "Send Email only if it is a Genuine Lead"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Checks if the incoming lead is genuine or fake').item.json.email }}",
+        "subject": "=Thank You {{ $('Checks if the incoming lead is genuine or fake').item.json.name }} - We've Received Your Request! ✅",
+        "message": "=<!DOCTYPE html> <html> <head> <meta charset=\"UTF-8\"> </head> <body style=\"margin:0; padding:0; background-color:#f4f6f8; font-family: 'Segoe UI', Arial, sans-serif;\">    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding: 30px 0;\">     <tr>       <td align=\"center\">          <table width=\"500\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.08);\">            <!-- Header -->           <tr>             <td style=\"background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 36px 30px; text-align:center;\">               <div style=\"width:64px; height:64px; background:#ffffff; border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:64px;\">                 ✅               </div>               <h1 style=\"color:#ffffff; margin:0; font-size:22px;\">Thank You, {{ $('Checks if the incoming lead is genuine or fake').item.json.name }}!</h1>               <p style=\"color:#e0e7ff; margin:8px 0 0; font-size:14px;\">We've received your request successfully</p>             </td>           </tr>            <!-- Body -->           <tr>             <td style=\"padding: 30px 30px 10px;\">               <p style=\"color:#111827; font-size:16px; line-height:1.6; margin:0 0 16px;\">                 Hi <strong>{{ $('Checks if the incoming lead is genuine or fake').item.json.name }}</strong>,               </p>               <p style=\"color:#374151; font-size:15px; line-height:1.6; margin:0 0 16px;\">                 Thank you for reaching out to us regarding <strong>{{ $('Checks if the incoming lead is genuine or fake').item.json.treatmentType }}</strong>. We're excited to help you on your journey and have successfully received your details.               </p>                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f9fafb; border-radius:10px; margin: 10px 0 20px;\">                 <tr>                   <td style=\"padding: 16px 20px;\">                     <span style=\"color:#6b7280; font-size:13px;\">Requested Treatment</span><br>                     <span style=\"color:#111827; font-size:16px; font-weight:600;\">{{ $('Checks if the incoming lead is genuine or fake').item.json.treatmentType }}</span>                   </td>                 </tr>               </table>                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background: linear-gradient(135deg, #eef2ff, #e0e7ff); border-radius:10px; margin-bottom: 24px;\">                 <tr>                   <td style=\"padding: 18px 20px; text-align:center;\">                     <p style=\"margin:0; color:#4338ca; font-size:15px; font-weight:600;\">                       ⏰ Our team will contact you within the next 24 hours                     </p>                   </td>                 </tr>               </table>                <p style=\"color:#374151; font-size:15px; line-height:1.6; margin:0 0 8px;\">                 If you have any urgent questions in the meantime, feel free to reply to this email — we're always happy to help.               </p>             </td>           </tr>            <!-- Footer -->           <tr>             <td style=\"background:#f9fafb; padding: 20px 30px; text-align:center;\">               <p style=\"margin:0; color:#9ca3af; font-size:12px;\">You're receiving this email because you submitted a request on our website.</p>               <p style=\"margin:4px 0 0; color:#9ca3af; font-size:12px;\">© 2026 Your Clinic Name. All rights reserved.</p>             </td>           </tr>          </table>        </td>     </tr>   </table>  </body> </html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Your Clinic Name"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "id": "dbb1b5c0-8b8a-4f14-85fe-bfd8979e5c3b",
+      "name": "Send a message to CLIENT",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [0, 192],
+      "id": "3d515c88-038f-4a6d-8a5f-9d9c85cf905d",
+      "name": "it's a Fake Lead Do not send Email"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Get Required Fields Only", "type": "main", "index": 0 }]]
+    },
+    "Get Required Fields Only": {
+      "main": [[{ "node": "Checks if the incoming lead is genuine or fake", "type": "main", "index": 0 }]]
+    },
+    "Checks if the incoming lead is genuine or fake": {
+      "main": [[{ "node": "Append new lead in sheet", "type": "main", "index": 0 }]]
+    },
+    "Append new lead in sheet": {
+      "main": [[{ "node": "Send a message to ME", "type": "main", "index": 0 }]]
+    },
+    "Send a message to ME": {
+      "main": [[{ "node": "Send Email only if it is a Genuine Lead", "type": "main", "index": 0 }]]
+    },
+    "Send Email only if it is a Genuine Lead": {
+      "main": [
+        [{ "node": "Send a message to CLIENT", "type": "main", "index": 0 }],
+        [{ "node": "it's a Fake Lead Do not send Email", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "YOUR_INSTANCE_ID"
+  }
+}
