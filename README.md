@@ -132,6 +132,10 @@ Send a `POST` request with this JSON body:
 
 ![Google Sheets](screenshots/sheets-output.png)
 
+## Demo Video
+
+**Demo Video is available on LinkedIn**
+- https://lnkd.in/p/djPEBwH3
 ---
 
 ## Use Cases
